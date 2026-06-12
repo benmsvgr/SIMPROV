@@ -3,18 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PORPROV DATA</title>
+  <title>SIPORBO</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+  <!-- LOGIN -->
   <div id="loginPage" class="login-page">
     <div class="login-card">
-      <h1>PORPROV DATA</h1>
-      <p>Login Bidang</p>
+      <div class="brand">
+        <h1>SIPORBO</h1>
+        <p>Sistem Informasi PORPROV Bogor</p>
+        <small>Pengelolaan pagu dan input kebutuhan per bidang</small>
+      </div>
 
-      <input type="text" id="username" placeholder="Username" />
-      <input type="password" id="password" placeholder="Password" />
+      <input type="text" id="username" placeholder="Username" autocomplete="username" />
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
 
       <button onclick="login()">Login</button>
 
@@ -22,18 +26,22 @@
     </div>
   </div>
 
+  <!-- APP -->
   <div id="appPage" class="app-page hidden">
+
     <header>
       <div>
-        <h2>PORPROV DATA</h2>
-        <p id="userInfo">-</p>
+        <h2>SIPORBO</h2>
+        <p>Sistem Informasi PORPROV Bogor</p>
+        <small id="userInfo">-</small>
       </div>
       <button class="logout" onclick="logout()">Logout</button>
     </header>
 
+    <!-- SUMMARY -->
     <section class="summary">
       <div class="box">
-        <span>Pagu Bidang</span>
+        <span>Pagu</span>
         <b id="paguBidang">Rp0</b>
       </div>
       <div class="box">
@@ -50,16 +58,26 @@
       </div>
     </section>
 
+    <!-- ADMIN PANEL -->
     <section id="adminPanel" class="panel hidden">
-      <h3>Admin - Pagu & Akses Bidang</h3>
+      <div class="panel-title">
+        <h3>Admin - Pagu & Akses Bidang</h3>
+        <p>Admin bisa ubah pagu dan buka/tutup akses input masing-masing bidang.</p>
+      </div>
+
       <div id="bidangList"></div>
     </section>
 
+    <!-- INPUT PAKET -->
     <section class="panel">
-      <h3>Input Paket Kebutuhan</h3>
+      <div class="panel-title">
+        <h3>Input Paket Kebutuhan</h3>
+        <p>Isi rincian kebutuhan sesuai bidang masing-masing.</p>
+      </div>
 
       <div class="form-grid">
         <select id="inputBidang" class="admin-only hidden"></select>
+
         <input type="text" id="rincian" placeholder="Rincian kebutuhan" />
         <input type="text" id="keterangan" placeholder="Keterangan" />
         <input type="number" id="volume" placeholder="Volume" />
@@ -71,8 +89,13 @@
       <div id="saveMsg" class="msg"></div>
     </section>
 
+    <!-- DATA PAKET -->
     <section class="panel">
-      <h3>Data Paket</h3>
+      <div class="panel-title">
+        <h3>Data Paket</h3>
+        <p>Daftar paket kebutuhan yang sudah diinput.</p>
+      </div>
+
       <div class="table-wrap">
         <table>
           <thead>
@@ -88,10 +111,15 @@
               <th>Status</th>
             </tr>
           </thead>
-          <tbody id="paketBody"></tbody>
+          <tbody id="paketBody">
+            <tr>
+              <td colspan="9" class="empty">Belum ada data</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </section>
+
   </div>
 
   <script src="app.js"></script>
