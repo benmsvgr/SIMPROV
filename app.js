@@ -11,6 +11,14 @@ function rupiah(num) {
   }).format(Number(num || 0));
 }
 
+function setButtonLoading(buttonId, loadingText, normalText, isLoading) {
+  const btn = document.getElementById(buttonId);
+  if (!btn) return;
+
+  btn.disabled = isLoading;
+  btn.innerText = isLoading ? loadingText : normalText;
+}
+
 async function apiPost(payload) {
   const res = await fetch(API_URL, {
     method: "POST",
@@ -25,47 +33,68 @@ async function login() {
   const password = document.getElementById("password").value.trim();
   const msg = document.getElementById("loginMsg");
 
-  msg.innerHTML = "Memproses...";
-
-  const result = await apiPost({
-    action: "login",
-    username,
-    password
-  });
-
-  if (!result.success) {
-    msg.innerHTML = result.message;
+  if (!username || !password) {
+    msg.innerHTML = "Username dan password wajib diisi.";
     return;
   }
 
-  currentUser = result.user;
-  localStorage.setItem("porprov_user", JSON.stringify(currentUser));
+  msg.innerHTML = "";
+  setButtonLoading("loginBtn", "Memproses...", "Login", true);
 
-  document.getElementById("loginPage").classList.add("hidden");
-  document.getElementById("appPage").classList.remove("hidden");
+  try {
+    const result = await apiPost({
+      action: "login",
+      username,
+      password
+    });
 
-  await loadDashboard();
+    if (!result.success) {
+      msg.innerHTML = result.message;
+      setButtonLoading("loginBtn", "Memproses...", "Login", false);
+      return;
+    }
+
+    currentUser = result.user;
+    localStorage.setItem("siporbo_user", JSON.stringify(currentUser));
+
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("appPage").classList.remove("hidden");
+
+    await loadDashboard();
+
+  } catch (err) {
+    msg.innerHTML = "Gagal konek ke server. Cek URL Apps Script / deployment.";
+    console.error(err);
+  }
+
+  setButtonLoading("loginBtn", "Memproses...", "Login", false);
 }
 
 async function loadDashboard() {
-  const result = await apiPost({
-    action: "getDashboard",
-    user: currentUser
-  });
+  try {
+    const result = await apiPost({
+      action: "getDashboard",
+      user: currentUser
+    });
 
-  if (!result.success) {
-    alert(result.message);
-    return;
+    if (!result.success) {
+      alert(result.message);
+      return;
+    }
+
+    currentDashboard = result;
+
+    document.getElementById("userInfo").innerText =
+      `${currentUser.nama} - ${currentUser.nama_bidang || currentUser.id_bidang}`;
+
+    renderSummary();
+    renderPaket();
+    renderAdminPanel();
+
+  } catch (err) {
+    alert("Gagal memuat dashboard.");
+    console.error(err);
   }
-
-  currentDashboard = result;
-
-  document.getElementById("userInfo").innerText =
-    `${currentUser.nama} - ${currentUser.nama_bidang || currentUser.id_bidang}`;
-
-  renderSummary();
-  renderPaket();
-  renderAdminPanel();
 }
 
 function renderSummary() {
@@ -82,7 +111,9 @@ function renderSummary() {
     return;
   }
 
-  const rekap = currentDashboard.rekap.find(r => r.id_bidang === currentUser.id_bidang);
+  const rekap = currentDashboard.rekap.find(r =>
+    String(r.id_bidang).trim() === String(currentUser.id_bidang).trim()
+  );
 
   document.getElementById("paguBidang").innerText = rupiah(rekap?.pagu || 0);
   document.getElementById("totalInput").innerText = rupiah(rekap?.total_input || 0);
@@ -94,23 +125,34 @@ function renderPaket() {
   const tbody = document.getElementById("paketBody");
   tbody.innerHTML = "";
 
+  if (!currentDashboard.pakets || currentDashboard.pakets.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9" class="empty">Belum ada data paket</td>
+      </tr>
+    `;
+    return;
+  }
+
   const bidangMap = {};
   currentDashboard.bidangs.forEach(b => {
-    bidangMap[b.id_bidang] = b.nama_bidang;
+    bidangMap[String(b.id_bidang).trim()] = b.nama_bidang;
   });
 
   currentDashboard.pakets.forEach(p => {
+    const idBidang = String(p.id_bidang || "").trim();
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${p.id_paket || ""}</td>
-      <td>${bidangMap[p.id_bidang] || p.id_bidang || ""}</td>
+      <td>${bidangMap[idBidang] || idBidang}</td>
       <td>${p.rincian_kebutuhan || ""}</td>
       <td>${p.keterangan || ""}</td>
       <td>${p.volume || ""}</td>
       <td>${p.satuan || ""}</td>
       <td>${rupiah(p.harga_satuan || 0)}</td>
-      <td>${rupiah(p.jumlah || 0)}</td>
-      <td>${p.status || ""}</td>
+      <td><b>${rupiah(p.jumlah || 0)}</b></td>
+      <td><span class="badge badge-aman">${p.status || "DRAFT"}</span></td>
     `;
     tbody.appendChild(tr);
   });
@@ -140,20 +182,34 @@ function renderAdminPanel() {
     opt.textContent = b.nama_bidang;
     inputBidang.appendChild(opt);
 
+    const statusClass = b.status_pagu === "MELEBIHI PAGU" ? "badge-lebih" : "badge-aman";
+
     const row = document.createElement("div");
     row.className = "bidang-row";
     row.innerHTML = `
       <div>
-        <b>${b.nama_bidang}</b><br>
-        <small>${b.id_bidang}</small>
+        <b>${b.nama_bidang}</b>
+        <small>${b.id_bidang}</small><br>
+        <small>Total Input: ${rupiah(b.total_input)} | Sisa: ${rupiah(b.sisa_pagu)}</small><br>
+        <span class="badge ${statusClass}">${b.status_pagu}</span>
       </div>
-      <input type="number" value="${b.pagu}" id="pagu_${b.id_bidang}">
-      <select id="akses_${b.id_bidang}">
-        <option value="BUKA" ${b.status_akses === "BUKA" ? "selected" : ""}>BUKA</option>
-        <option value="TUTUP" ${b.status_akses === "TUTUP" ? "selected" : ""}>TUTUP</option>
-      </select>
+
+      <div class="input-group">
+        <label>Pagu</label>
+        <input type="number" value="${b.pagu}" id="pagu_${b.id_bidang}">
+      </div>
+
+      <div class="input-group">
+        <label>Akses</label>
+        <select id="akses_${b.id_bidang}">
+          <option value="BUKA" ${b.status_akses === "BUKA" ? "selected" : ""}>BUKA</option>
+          <option value="TUTUP" ${b.status_akses === "TUTUP" ? "selected" : ""}>TUTUP</option>
+        </select>
+      </div>
+
       <button onclick="updateBidang('${b.id_bidang}')">Simpan</button>
     `;
+
     bidangList.appendChild(row);
   });
 }
@@ -162,32 +218,38 @@ async function updateBidang(idBidang) {
   const pagu = document.getElementById(`pagu_${idBidang}`).value;
   const statusAkses = document.getElementById(`akses_${idBidang}`).value;
 
-  const resPagu = await apiPost({
-    action: "updatePaguBidang",
-    user: currentUser,
-    id_bidang: idBidang,
-    pagu
-  });
+  try {
+    const resPagu = await apiPost({
+      action: "updatePaguBidang",
+      user: currentUser,
+      id_bidang: idBidang,
+      pagu
+    });
 
-  if (!resPagu.success) {
-    alert(resPagu.message);
-    return;
+    if (!resPagu.success) {
+      alert(resPagu.message);
+      return;
+    }
+
+    const resStatus = await apiPost({
+      action: "updateStatusBidang",
+      user: currentUser,
+      id_bidang: idBidang,
+      status_akses: statusAkses
+    });
+
+    if (!resStatus.success) {
+      alert(resStatus.message);
+      return;
+    }
+
+    alert("Bidang berhasil diupdate.");
+    await loadDashboard();
+
+  } catch (err) {
+    alert("Gagal update bidang.");
+    console.error(err);
   }
-
-  const resStatus = await apiPost({
-    action: "updateStatusBidang",
-    user: currentUser,
-    id_bidang: idBidang,
-    status_akses: statusAkses
-  });
-
-  if (!resStatus.success) {
-    alert(resStatus.message);
-    return;
-  }
-
-  alert("Bidang berhasil diupdate");
-  await loadDashboard();
 }
 
 async function savePaket() {
@@ -210,41 +272,58 @@ async function savePaket() {
     return;
   }
 
-  msg.innerHTML = "Menyimpan...";
+  msg.innerHTML = "";
+  setButtonLoading("saveBtn", "Menyimpan...", "Simpan Paket", true);
 
-  const result = await apiPost({
-    action: "savePaket",
-    user: currentUser,
-    data
-  });
+  try {
+    const result = await apiPost({
+      action: "savePaket",
+      user: currentUser,
+      data
+    });
 
-  msg.innerHTML = result.message;
+    msg.innerHTML = result.message;
 
-  if (result.success) {
-    document.getElementById("rincian").value = "";
-    document.getElementById("keterangan").value = "";
-    document.getElementById("volume").value = "";
-    document.getElementById("satuan").value = "";
-    document.getElementById("harga").value = "";
+    if (result.success) {
+      document.getElementById("rincian").value = "";
+      document.getElementById("keterangan").value = "";
+      document.getElementById("volume").value = "";
+      document.getElementById("satuan").value = "";
+      document.getElementById("harga").value = "";
 
-    await loadDashboard();
+      await loadDashboard();
+    }
+
+  } catch (err) {
+    msg.innerHTML = "Gagal simpan paket.";
+    console.error(err);
   }
+
+  setButtonLoading("saveBtn", "Menyimpan...", "Simpan Paket", false);
 }
 
 function logout() {
-  localStorage.removeItem("porprov_user");
+  localStorage.removeItem("siporbo_user");
   currentUser = null;
+  currentDashboard = null;
+
   document.getElementById("appPage").classList.add("hidden");
   document.getElementById("loginPage").classList.remove("hidden");
+
+  document.getElementById("username").value = "";
+  document.getElementById("password").value = "";
+  document.getElementById("loginMsg").innerHTML = "";
 }
 
 window.onload = async function () {
-  const saved = localStorage.getItem("porprov_user");
+  const saved = localStorage.getItem("siporbo_user");
 
   if (saved) {
     currentUser = JSON.parse(saved);
+
     document.getElementById("loginPage").classList.add("hidden");
     document.getElementById("appPage").classList.remove("hidden");
+
     await loadDashboard();
   }
 };
