@@ -24,12 +24,17 @@ async function login(){
 }
 
 async function loadDashboard(){
-  const result=await apiPost({action:"getDashboard",user:currentUser});
-  if(!result.success){alert(result.message);return;}
-  currentDashboard=result;
-  document.getElementById("userInfo").innerText=`${currentUser.nama} - ${currentUser.nama_bidang||currentUser.id_bidang}`;
-  document.querySelectorAll(".admin-only").forEach(el=>el.classList.toggle("hidden",!isAdmin()));
-  renderSummary(); renderAnggaran(); renderMonitoring(); renderPerencanaan(); renderPencairan(); fillSelects();
+  try{
+    const result=await apiPost({action:"getDashboard",user:currentUser});
+    if(!result.success){alert(result.message);return;}
+    currentDashboard=result;
+    document.getElementById("userInfo").innerText=`${currentUser.nama} - ${currentUser.nama_bidang||currentUser.id_bidang}`;
+    document.querySelectorAll(".admin-only").forEach(el=>el.classList.toggle("hidden",!isAdmin()));
+    renderSummary(); renderAnggaran(); renderMonitoring(); renderPerencanaan(); renderPencairan(); fillSelects();
+  }catch(err){
+    console.error(err);
+    alert("Gagal memuat dashboard: " + (err.message || err));
+  }
 }
 
 function showMenu(menu){
