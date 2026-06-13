@@ -293,3 +293,206 @@ input[type="file"]::file-selector-button:hover{filter:brightness(1.08);transform
 .logo-mini.logo-img-wrap{width:58px!important;height:58px!important;border-radius:0!important;}
 .loader-logo-wrap{background:transparent!important;border:0!important;box-shadow:none!important;}
 .loader-logo-wrap img{filter:drop-shadow(0 14px 24px rgba(15,76,129,.18));}
+
+/* =========================
+   SIPORBO v17 - Logo Color Harmony
+   Warna diseragamin sama logo: biru, kuning, merah, hijau
+   dibuat halus biar nggak terlalu ramai.
+   ========================= */
+:root{
+  --logo-blue:#0b78bd;
+  --logo-blue-dark:#073e73;
+  --logo-cyan:#16a8d8;
+  --logo-yellow:#f5b51b;
+  --logo-yellow-soft:#fff4cf;
+  --logo-red:#e42020;
+  --logo-red-soft:#ffe8e8;
+  --logo-green:#12a84f;
+  --logo-green-soft:#e7f8ee;
+  --primary:var(--logo-blue-dark);
+  --primary2:var(--logo-cyan);
+  --dark:#06315f;
+  --bg:#eef8ff;
+  --shadow:0 24px 60px rgba(7,62,115,.13);
+}
+
+body{
+  background:
+    radial-gradient(circle at 12% 18%, rgba(11,120,189,.20), transparent 26%),
+    radial-gradient(circle at 82% 18%, rgba(245,181,27,.13), transparent 22%),
+    radial-gradient(circle at 90% 70%, rgba(18,168,79,.10), transparent 26%),
+    linear-gradient(135deg,#edf9ff 0%,#ffffff 45%,#eef9ff 100%) !important;
+}
+
+.bg-orb.orb-a{background:rgba(11,120,189,.28)!important;}
+.bg-orb.orb-b{background:rgba(245,181,27,.16)!important;}
+
+/* Logo tetap bersih tanpa border/kotak berat */
+.logo-img-wrap,
+.logo-box.logo-img-wrap,
+.logo-mini.logo-img-wrap{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+}
+.logo-img-wrap img{
+  filter:drop-shadow(0 10px 18px rgba(7,62,115,.18));
+}
+
+/* Header dan panel: putih premium dengan garis aksen logo halus */
+.topbar,.panel,.summary-card,.login-card{
+  background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(244,252,255,.84))!important;
+  border:1px solid rgba(209,231,243,.92)!important;
+}
+.topbar:after,
+.panel:after{
+  content:"";
+  position:absolute;
+  left:18px;right:18px;top:0;height:3px;
+  border-radius:0 0 999px 999px;
+  background:linear-gradient(90deg,var(--logo-blue),var(--logo-yellow),var(--logo-red),var(--logo-green));
+  opacity:.62;
+  pointer-events:none;
+}
+
+/* Menu utama seragam warna logo, tapi active tetap dominan biru */
+.menu-nav button{
+  background:rgba(255,255,255,.82)!important;
+  color:var(--logo-blue-dark)!important;
+  border:1px solid rgba(11,120,189,.16)!important;
+  box-shadow:0 10px 22px rgba(7,62,115,.06)!important;
+  position:relative;
+  overflow:hidden;
+}
+.menu-nav button:before{
+  content:"";
+  position:absolute;left:0;right:0;bottom:0;height:3px;
+  background:linear-gradient(90deg,var(--logo-blue),var(--logo-yellow),var(--logo-red),var(--logo-green));
+  opacity:.18;
+}
+.menu-nav button:hover{
+  transform:translateY(-2px);
+  border-color:rgba(11,120,189,.30)!important;
+  box-shadow:0 16px 28px rgba(7,62,115,.12)!important;
+}
+.menu-nav button.active{
+  background:linear-gradient(135deg,var(--logo-blue-dark),var(--logo-blue) 58%,var(--logo-cyan))!important;
+  color:white!important;
+  box-shadow:0 18px 34px rgba(11,120,189,.24)!important;
+}
+.menu-nav button.active:before{
+  opacity:1;
+  height:4px;
+  background:linear-gradient(90deg,var(--logo-yellow),#fff0a8,var(--logo-green));
+}
+
+/* Summary card diberi aksen beda-beda sesuai warna logo, tanpa terlalu rame */
+.summary-card:nth-child(4n+1):after{background:rgba(11,120,189,.14)!important;}
+.summary-card:nth-child(4n+2):after{background:rgba(245,181,27,.17)!important;}
+.summary-card:nth-child(4n+3):after{background:rgba(18,168,79,.13)!important;}
+.summary-card:nth-child(4n+4):after{background:rgba(228,32,32,.10)!important;}
+.summary-card:nth-child(4n+1){border-top:3px solid rgba(11,120,189,.55)!important;}
+.summary-card:nth-child(4n+2){border-top:3px solid rgba(245,181,27,.60)!important;}
+.summary-card:nth-child(4n+3){border-top:3px solid rgba(18,168,79,.48)!important;}
+.summary-card:nth-child(4n+4){border-top:3px solid rgba(228,32,32,.38)!important;}
+.summary-card b{color:var(--logo-blue-dark)!important;}
+
+/* Button palette */
+button{
+  background:linear-gradient(135deg,var(--logo-blue-dark),var(--logo-blue) 55%,var(--logo-cyan))!important;
+}
+.btn-green{
+  background:linear-gradient(135deg,#0f7d3f,var(--logo-green))!important;
+}
+.btn-orange,.btn-gold{
+  background:linear-gradient(135deg,#c77a00,var(--logo-yellow))!important;
+  color:#fff!important;
+}
+.btn-red,.btn-danger{
+  background:linear-gradient(135deg,#ba1717,var(--logo-red))!important;
+}
+.btn-soft{
+  background:linear-gradient(135deg,#f8fcff,#eef8ff)!important;
+  color:var(--logo-blue-dark)!important;
+  border:1px solid rgba(11,120,189,.14)!important;
+}
+
+/* Badge status lebih seirama */
+.badge-blue{background:#e4f4ff!important;color:#07689f!important;}
+.badge-green{background:var(--logo-green-soft)!important;color:#087a38!important;}
+.badge-orange{background:var(--logo-yellow-soft)!important;color:#9a5d00!important;}
+.badge-red{background:var(--logo-red-soft)!important;color:#a31212!important;}
+.badge-gray{background:#eef4f9!important;color:#3e5268!important;}
+
+/* Tabel dan row status */
+th{
+  background:linear-gradient(135deg,#f5fbff,#edf7ff)!important;
+  color:#173a5c!important;
+}
+.table-wrap,
+.group-table,
+.doc-group-card{
+  border-color:rgba(11,120,189,.12)!important;
+}
+tbody tr.row-finished,
+tr.row-finished{
+  background:linear-gradient(90deg,rgba(18,168,79,.10),rgba(255,255,255,.96))!important;
+}
+tbody tr.row-rejected,
+tr.row-rejected{
+  background:linear-gradient(90deg,rgba(245,181,27,.16),rgba(255,255,255,.96))!important;
+}
+tbody tr.row-progress,
+tr.row-progress{
+  background:linear-gradient(90deg,rgba(11,120,189,.08),rgba(255,255,255,.96))!important;
+}
+
+/* Form: fokus biru, bukan terlalu neon */
+input:focus,select:focus,textarea:focus{
+  border-color:var(--logo-blue)!important;
+  box-shadow:0 0 0 4px rgba(11,120,189,.12)!important;
+}
+select{
+  border-color:rgba(11,120,189,.18)!important;
+}
+input[type="file"]{
+  border-color:rgba(245,181,27,.45)!important;
+  background:linear-gradient(135deg,#fff,#f8fcff)!important;
+}
+input[type="file"]::file-selector-button{
+  background:linear-gradient(135deg,var(--logo-blue-dark),var(--logo-blue))!important;
+}
+
+/* Login: nuansa warna logo dengan animasi halus */
+.login-page{
+  background:
+    radial-gradient(circle at 18% 18%, rgba(11,120,189,.27), transparent 27%),
+    radial-gradient(circle at 72% 24%, rgba(245,181,27,.16), transparent 22%),
+    radial-gradient(circle at 82% 78%, rgba(18,168,79,.12), transparent 28%),
+    radial-gradient(circle at 16% 80%, rgba(228,32,32,.09), transparent 24%),
+    linear-gradient(135deg,#eefaff,#ffffff 52%,#eaf8ff)!important;
+}
+.login-card{
+  border-top:4px solid transparent!important;
+  border-image:linear-gradient(90deg,var(--logo-blue),var(--logo-yellow),var(--logo-red),var(--logo-green)) 1!important;
+}
+.login-card h1,.topbar h2,.panel h3{
+  color:var(--logo-blue-dark)!important;
+}
+
+/* Loading logo pakai ring warna logo */
+.loader-ring{
+  border-top-color:var(--logo-blue)!important;
+  border-right-color:var(--logo-yellow)!important;
+}
+.loader-ring-2{
+  border-left-color:var(--logo-red)!important;
+  border-bottom-color:var(--logo-green)!important;
+}
+
+/* Hindari terlalu rame di layar kecil */
+@media(max-width:650px){
+  .topbar:after,.panel:after{left:12px;right:12px;height:2px;}
+  .summary-card{border-top-width:2px!important;}
+}
