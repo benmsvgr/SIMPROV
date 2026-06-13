@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SIPORBO | Sistem Informasi PORPROV Bogor</title>
+
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link rel="apple-touch-icon" href="logo-siporbo.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,8 +14,14 @@
   <div class="bg-orb orb-b"></div>
 
   <div id="loadingOverlay" class="loading-overlay hidden">
-    <div class="loader-card">
-      <div class="spinner"></div>
+    <div class="loader-card loader-premium-card">
+      <div class="loader-logo-stage">
+        <div class="loader-ring"></div>
+        <div class="loader-ring loader-ring-2"></div>
+        <div class="loader-logo-wrap">
+          <img src="logo-siporbo.png" alt="Logo SIPORBO" />
+        </div>
+      </div>
       <b id="loadingText">Memproses...</b>
       <small>Mohon tunggu sebentar</small>
     </div>
@@ -20,7 +29,7 @@
 
   <div id="loginPage" class="login-page">
     <div class="login-card fade-up">
-      <div class="logo-box">SP</div>
+      <div class="logo-box logo-img-wrap"><img src="logo-siporbo.png" alt="Logo SIPORBO"></div>
       <h1>SIPORBO</h1>
       <p>Sistem Informasi PORPROV Bogor</p>
       <small>Struktur anggaran, perencanaan, dan pencairan per bidang</small>
@@ -39,7 +48,7 @@
   <main id="appPage" class="app-page hidden">
     <header class="topbar">
       <div class="topbar-left">
-        <div class="logo-mini">SP</div>
+        <div class="logo-mini logo-img-wrap"><img src="logo-siporbo.png" alt="Logo SIPORBO"></div>
         <div>
           <h2>SIPORBO</h2>
           <p>Sistem Informasi PORPROV Bogor</p>
