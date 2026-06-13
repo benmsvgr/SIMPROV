@@ -70,9 +70,11 @@
         <div class="field"><label>Nama Kegiatan</label><input id="editNamaKegiatan" /></div>
         <div class="field"><label>Rincian Kebutuhan</label><input id="editRincian" /></div>
         <div class="field"><label>Keterangan</label><input id="editKeterangan" /></div>
-        <div class="field"><label>Volume</label><input id="editVolume" type="number" /></div>
+        <div class="field"><label>Volume</label><input id="editVolume" inputmode="numeric" oninput="onAngkaInput(this, 'editVolume', 'editHarga', 'editTotalPreview')" /></div>
         <div class="field"><label>Satuan</label><input id="editSatuan" /></div>
-        <div class="field"><label>Harga Satuan</label><input id="editHarga" type="number" /></div>
+        <div class="field"><label>Harga Satuan</label><input id="editHarga" inputmode="numeric" oninput="onAngkaInput(this, 'editVolume', 'editHarga', 'editTotalPreview')" /></div>
+        <div class="field"><label>Total Otomatis</label><input id="editTotalPreview" class="readonly-total" value="Rp0" readonly /></div>
+        <div id="editAlasanWrap" class="field full hidden"><label>Alasan Perubahan</label><textarea id="editAlasanPerubahan" rows="3" placeholder="Jelaskan alasan perubahan perencanaan ini"></textarea></div>
       </div>
       <button onclick="submitEditPerencanaan()">Simpan & Ajukan</button>
     </div>
