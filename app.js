@@ -350,3 +350,115 @@ async function updateCair(id, status){
 }
 function logout(){ localStorage.removeItem("siporbo_user"); currentUser=null; dashboard=null; document.getElementById("appPage").classList.add("hidden"); document.getElementById("loginPage").classList.remove("hidden"); }
 window.onload = async function(){ const saved = localStorage.getItem("siporbo_user"); if(saved){ currentUser=JSON.parse(saved); activeMenu=isAdmin()?"Dashboard Monitoring":"Struktur Anggaran"; document.getElementById("loginPage").classList.add("hidden"); document.getElementById("appPage").classList.remove("hidden"); await loadDashboard(true); } };
+
+/* =========================
+   SIPORBO v11 behavior overrides
+   ========================= */
+function isPencairanComplete(idKegiatan){
+  const st = String(getPencairanStatus(idKegiatan) || "").toUpperCase();
+  if(["DOKUMEN LENGKAP","SIAP DICAIRKAN","SUDAH DICAIRKAN"].includes(st)) return true;
+  const docs = (dashboard?.dokumen || []).filter(d => String(d.id_kegiatan) === String(idKegiatan));
+  return docs.length > 0 && docs.every(d => String(d.status_verifikasi || "").toUpperCase() === "VALID");
+}
+function isKegiatanLocked(k){ return isPencairanComplete(k.id_kegiatan); }
+function getApprovedOpenKegiatan(){
+  return (dashboard?.perencanaan || []).filter(k =>
+    String(k.status_perencanaan || "").toUpperCase() === "DISETUJUI" && !isPencairanComplete(k.id_kegiatan)
+  );
+}
+function groupedDocs(){
+  const docs = dashboard?.dokumen || [];
+  const groups = {};
+  docs.forEach(d => {
+    const key = String(d.id_kegiatan || "");
+    if(!groups[key]){
+      const keg = (dashboard?.perencanaan || []).find(k => String(k.id_kegiatan) === key) || {};
+      groups[key] = {id_kegiatan:key, id_bidang:d.id_bidang || keg.id_bidang, kegiatan:keg, docs:[]};
+    }
+    groups[key].docs.push(d);
+  });
+  return Object.values(groups);
+}
+function groupDocStatus(g){
+  const docs = g.docs || [];
+  if(!docs.length) return "BELUM ADA DOKUMEN";
+  if(docs.some(d => ["PERBAIKAN","DITOLAK"].includes(String(d.status_verifikasi||"").toUpperCase()))) return "PERBAIKAN";
+  if(docs.every(d => String(d.status_verifikasi||"").toUpperCase() === "VALID")) return "VALID";
+  return "MENUNGGU";
+}
+function filterBarPencairan(){
+  return `<div class="filter-card"><div class="toolbar">${isAdmin()?`<div class="field small"><label>Filter Bidang</label><select onchange="filters.cairBidang=this.value;pencairanPage=1;renderPencairan()">${bidangOptions(filters.cairBidang,true)}</select></div>`:""}<div class="field small"><label>Filter Status Dokumen</label><select onchange="filters.cairStatus=this.value;pencairanPage=1;renderPencairan()"><option value="ALL">Semua Status</option>${["MENUNGGU","VALID","PERBAIKAN"].map(s=>`<option value="${s}" ${filters.cairStatus===s?'selected':''}>${s}</option>`).join("")}</select></div><div class="field"><label>Search Nama Kegiatan</label><input value="${esc(filters.cairSearch)}" placeholder="Cari nama kegiatan..." oninput="filters.cairSearch=this.value;pencairanPage=1;renderPencairan()"></div><button class="btn-refresh" onclick="refreshData()">Refresh</button></div></div>`;
+}
+function renderPencairan(){
+  let html = "";
+  if(!isAdmin()){
+    const approved = getApprovedOpenKegiatan();
+    html += `<section class="panel fade-up premium-panel collapsible-panel"><div class="panel-head"><div><h3>Upload Dokumen Pencairan</h3><p class="panel-sub">Satu kegiatan bisa upload lebih dari satu dokumen. Kegiatan yang sudah valid/selesai tidak muncul lagi di pilihan upload.</p></div>${collapseButton('uploadPencairan')}</div><div class="collapse-body ${collapseState.uploadPencairan?'hidden':''}"><div class="form-grid"><div class="field"><label>Pilih Kegiatan</label><select id="dokKegiatan">${approved.map(k=>`<option value="${esc(k.id_kegiatan)}">${esc(k.nama_kegiatan)}</option>`).join("")}</select></div></div><div id="uploadRows"><div class="doc-upload-row"><div class="field"><label>Jenis Dokumen</label><select class="jenisDok"><option>Berita Acara</option><option>Daftar Hadir</option><option>Dokumentasi</option><option>Kwitansi</option><option>Surat Tugas</option><option>Dokumen Lainnya</option></select></div><div class="field"><label>File Dokumen</label><input type="file" class="fileDok"></div><button class="btn-red" onclick="removeUploadRow(this)" type="button">Hapus</button></div></div><button class="btn-soft" onclick="addUploadRow()" type="button">+ Tambah File Dokumen</button> <button onclick="uploadDokumen()">Upload Semua Dokumen</button><div id="uploadMsg" class="msg">${approved.length?"":"Tidak ada kegiatan yang bisa diupload. Kegiatan harus DISETUJUI dan belum selesai validasi pencairan."}</div></div></section>`;
+  }
+
+  let groups = groupedDocs();
+  if(isAdmin() && filters.cairBidang !== "ALL") groups = groups.filter(g => String(g.id_bidang)===filters.cairBidang);
+  if(filters.cairStatus !== "ALL") groups = groups.filter(g => groupDocStatus(g) === filters.cairStatus);
+  const q = filters.cairSearch.trim().toLowerCase();
+  if(q) groups = groups.filter(g => kegiatanName(g.id_kegiatan).toLowerCase().includes(q));
+  const pageData = groups.slice((pencairanPage-1)*perPage, pencairanPage*perPage);
+  const rows = pageData.map(g=>renderDokumenGroupRow(g)).join("");
+  html += `<section class="panel fade-up"><h3>Data Dokumen & Pencairan</h3><p class="panel-sub">${isAdmin()?"Rekap dokumen digabung per kegiatan agar validasi lebih gampang. Kalau dokumen masih kurang, klik Perbaikan dan isi alasan.":"Rekap dokumen digabung per kegiatan agar lebih jelas."}</p>${filterBarPencairan()}<div class="table-wrap grouped"><table class="group-table"><thead><tr><th>Rekap Kegiatan</th></tr></thead><tbody>${rows || `<tr><td class="empty">Belum ada dokumen</td></tr>`}</tbody></table></div>${pager(groups.length, pencairanPage, 'goPencairanPage')}</section>`;
+  document.getElementById("contentArea").innerHTML = html;
+}
+function renderDokumenGroupRow(g){
+  const stGroup = groupDocStatus(g);
+  const stCair = getPencairanStatus(g.id_kegiatan);
+  const docsHtml = (g.docs || []).map(d => {
+    const st = String(d.status_verifikasi || 'MENUNGGU').toUpperCase();
+    let rev = "";
+    if(!isAdmin() && (st === 'PERBAIKAN' || st === 'DITOLAK')){
+      rev = `<div class="doc-action-box"><input type="file" id="revisi_${esc(d.id_dokumen)}"><button class="btn-mini" onclick="revisiDokumen('${esc(d.id_dokumen)}')">Upload Revisi</button></div>`;
+    }
+    return `<div class="doc-item"><div><b>${esc(d.jenis_dokumen || '-')}</b><br><small class="muted">${esc(d.nama_file || '-')}</small></div><div>${d.url_file?`<a href="${esc(d.url_file)}" target="_blank">Buka File</a>`:esc(d.nama_file || '-')}</div><div>${badge(d.status_verifikasi || 'MENUNGGU')}</div><div>${d.catatan_admin?`<div class="group-reason"><b>Catatan:</b> ${esc(d.catatan_admin)}</div>`:rev || `<span class="muted">-</span>`}</div></div>`;
+  }).join("");
+  let actions = `<span class="muted">-</span>`;
+  if(isAdmin()){
+    actions = `<div class="group-actions"><button class="btn-mini btn-green btn-wide" onclick="validKegiatanDokumen('${esc(g.id_kegiatan)}')">Valid</button><button class="btn-mini btn-orange btn-wide" onclick="perbaikanKegiatanDokumen('${esc(g.id_kegiatan)}')">Perbaikan</button></div>`;
+  }
+  return `<tr><td class="doc-group-card"><div class="doc-group-head"><div class="doc-group-title"><b>${esc(kegiatanName(g.id_kegiatan))}</b><small>${esc(g.id_kegiatan)}</small></div><div><small class="muted">Bidang</small><br><b>${esc(bidangName(g.id_bidang))}</b></div><div><small class="muted">Status Dokumen</small><br>${badge(stGroup)}</div><div><small class="muted">Status Pencairan</small><br>${badge(stCair)}</div></div><div class="doc-list">${docsHtml}</div><div class="doc-group-head" style="border-top:1px solid #e8f1f7;border-bottom:0"><div class="group-reason"><b>Total dokumen:</b> ${(g.docs||[]).length} file</div><div></div><div></div>${actions}</div></td></tr>`;
+}
+async function validKegiatanDokumen(idKegiatan){
+  const docs = (dashboard?.dokumen || []).filter(d => String(d.id_kegiatan) === String(idKegiatan));
+  if(!docs.length){ alert('Belum ada dokumen untuk kegiatan ini.'); return; }
+  showLoading('Memvalidasi dokumen kegiatan...');
+  try{
+    for(const d of docs){
+      if(String(d.status_verifikasi || '').toUpperCase() !== 'VALID'){
+        const r = await apiPost({action:'verifyDokumen', user:currentUser, id_dokumen:d.id_dokumen, status_verifikasi:'VALID', catatan_admin:''});
+        if(!r.success) throw new Error(r.message);
+      }
+    }
+    alert('Dokumen kegiatan sudah dinyatakan valid.');
+    await loadDashboard(false);
+  }catch(e){ alert(e.message || 'Gagal validasi dokumen.'); }
+  finally{ hideLoading(); }
+}
+async function perbaikanKegiatanDokumen(idKegiatan){
+  const catatan = prompt('Alasan perbaikan dokumen wajib diisi:');
+  if(!catatan) return;
+  const docs = (dashboard?.dokumen || []).filter(d => String(d.id_kegiatan) === String(idKegiatan));
+  if(!docs.length){ alert('Belum ada dokumen untuk kegiatan ini.'); return; }
+  showLoading('Mengirim status perbaikan kegiatan...');
+  try{
+    for(const d of docs){
+      const r = await apiPost({action:'verifyDokumen', user:currentUser, id_dokumen:d.id_dokumen, status_verifikasi:'PERBAIKAN', catatan_admin:catatan});
+      if(!r.success) throw new Error(r.message);
+    }
+    alert('Status perbaikan sudah dikirim ke bidang.');
+    await loadDashboard(false);
+  }catch(e){ alert(e.message || 'Gagal mengirim perbaikan.'); }
+  finally{ hideLoading(); }
+}
+function addUploadRow(){
+  const wrap = document.getElementById("uploadRows");
+  const div = document.createElement("div");
+  div.className = "doc-upload-row";
+  div.innerHTML = `<div class="field"><label>Jenis Dokumen</label><select class="jenisDok"><option>Berita Acara</option><option>Daftar Hadir</option><option>Dokumentasi</option><option>Kwitansi</option><option>Surat Tugas</option><option>Dokumen Lainnya</option></select></div><div class="field"><label>File Dokumen</label><input type="file" class="fileDok"></div><button class="btn-red" onclick="removeUploadRow(this)" type="button">Hapus</button>`;
+  wrap.appendChild(div);
+}
