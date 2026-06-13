@@ -12,6 +12,7 @@ let filters = {
 };
 let adminEditRows = {};
 let collapseState = { perencanaanInput: false, uploadPencairan: false };
+let docGroupCollapse = {};
 
 const MENUS_USER = ["Struktur Anggaran", "Perencanaan", "Pencairan"];
 const MENUS_ADMIN = ["Dashboard Monitoring", "Struktur Anggaran", "Perencanaan", "Pencairan"];
@@ -210,16 +211,17 @@ function renderPerencanaanRow(k){
     if(st === "DIAJUKAN" || st === "PERUBAHAN_DIAJUKAN") aksi = `<button class="btn-mini btn-green" onclick="setujui('${esc(k.id_kegiatan)}')">Setujui</button><button class="btn-mini btn-orange" onclick="tolak('${esc(k.id_kegiatan)}')">Tolak</button>`;
     else aksi = `<span class="muted">-</span>`;
   } else if(locked){
-    aksi = `<span class="lock-badge">🔒 Selesai</span>`;
+    aksi = `<span class="status-done-pill">Selesai</span>`;
   } else if(!aksesBuka){
-    aksi = `<span class="lock-badge">🔒 Akses perencanaan ditutup</span>`;
+    aksi = `<span class="lock-badge">Akses perencanaan ditutup</span>`;
   } else {
     if(st === "DIAJUKAN" || st === "DITOLAK") aksi = `<button class="btn-mini" onclick="openEditModal('${esc(k.id_kegiatan)}','normal')">Edit</button><button class="btn-mini btn-red" onclick="hapusPerencanaan('${esc(k.id_kegiatan)}')">Hapus</button>`;
     else if(st === "DISETUJUI") aksi = `<button class="btn-mini btn-orange" onclick="openEditModal('${esc(k.id_kegiatan)}','change')">Ajukan Perubahan</button>`;
     else aksi = `<span class="muted">Menunggu admin</span>`;
   }
   const perubahan = toNumber(k.perubahan_ke) ? `<br><small class="muted">Perubahan Ke-${toNumber(k.perubahan_ke)}</small>` : "";
-  return `<tr><td>${esc(k.id_kegiatan)}</td><td>${esc(bidangName(k.id_bidang))}</td><td><b>${esc(k.nama_kegiatan)}</b>${perubahan}</td><td>${esc(k.rincian_kebutuhan)}</td><td>${esc(k.volume)}</td><td>${esc(k.satuan)}</td><td>${rupiah(k.harga_satuan)}</td><td><b>${rupiah(k.jumlah || (toNumber(k.volume)*toNumber(k.harga_satuan)))}</b></td><td>${badge(st)}</td><td class="note-cell">${note}</td><td class="nowrap">${aksi}</td></tr>`;
+  const rowClass = locked ? "row-selesai" : (st === "DITOLAK" ? "row-ditolak" : "row-proses");
+  return `<tr class="rencana-row ${rowClass}"><td>${esc(k.id_kegiatan)}</td><td>${esc(bidangName(k.id_bidang))}</td><td><b>${esc(k.nama_kegiatan)}</b>${perubahan}</td><td>${esc(k.rincian_kebutuhan)}</td><td>${esc(k.volume)}</td><td>${esc(k.satuan)}</td><td>${rupiah(k.harga_satuan)}</td><td><b>${rupiah(k.jumlah || (toNumber(k.volume)*toNumber(k.harga_satuan)))}</b></td><td>${badge(st)}</td><td class="note-cell">${note}</td><td class="nowrap">${aksi}</td></tr>`;
 }
 
 function filterBarPencairan(){
@@ -409,6 +411,7 @@ function renderPencairan(){
 function renderDokumenGroupRow(g){
   const stGroup = groupDocStatus(g);
   const stCair = getPencairanStatus(g.id_kegiatan);
+  const isCollapsed = docGroupCollapse[g.id_kegiatan] === undefined ? true : !!docGroupCollapse[g.id_kegiatan];
   const docsHtml = (g.docs || []).map(d => {
     const st = String(d.status_verifikasi || 'MENUNGGU').toUpperCase();
     let rev = "";
@@ -421,8 +424,9 @@ function renderDokumenGroupRow(g){
   if(isAdmin()){
     actions = `<div class="group-actions"><button class="btn-mini btn-green btn-wide" onclick="validKegiatanDokumen('${esc(g.id_kegiatan)}')">Valid</button><button class="btn-mini btn-orange btn-wide" onclick="perbaikanKegiatanDokumen('${esc(g.id_kegiatan)}')">Perbaikan</button></div>`;
   }
-  return `<tr><td class="doc-group-card"><div class="doc-group-head"><div class="doc-group-title"><b>${esc(kegiatanName(g.id_kegiatan))}</b><small>${esc(g.id_kegiatan)}</small></div><div><small class="muted">Bidang</small><br><b>${esc(bidangName(g.id_bidang))}</b></div><div><small class="muted">Status Dokumen</small><br>${badge(stGroup)}</div><div><small class="muted">Status Pencairan</small><br>${badge(stCair)}</div></div><div class="doc-list">${docsHtml}</div><div class="doc-group-head" style="border-top:1px solid #e8f1f7;border-bottom:0"><div class="group-reason"><b>Total dokumen:</b> ${(g.docs||[]).length} file</div><div></div><div></div>${actions}</div></td></tr>`;
+  return `<tr><td class="doc-group-card"><div class="doc-group-head doc-group-head-v12"><div class="doc-group-title"><b>${esc(kegiatanName(g.id_kegiatan))}</b><small>${esc(g.id_kegiatan)}</small></div><div><small class="muted">Bidang</small><br><b>${esc(bidangName(g.id_bidang))}</b></div><div><small class="muted">Status Dokumen</small><br>${badge(stGroup)}</div><div><small class="muted">Status Pencairan</small><br>${badge(stCair)}</div><div class="doc-toggle-wrap"><button class="btn-mini btn-detail" onclick="toggleDocGroup('${esc(g.id_kegiatan)}')">${isCollapsed ? 'Lihat Rincian' : 'Minimize'}</button></div></div><div class="doc-list ${isCollapsed ? 'hidden' : ''}">${docsHtml}</div><div class="doc-group-head doc-group-foot-v12" style="border-top:1px solid #e8f1f7;border-bottom:0"><div class="group-reason"><b>Rekap:</b> ${(g.docs||[]).length} file dokumen. ${isCollapsed ? 'Klik Lihat Rincian untuk membuka daftar file.' : 'Rincian file sedang ditampilkan.'}</div><div></div><div></div><div></div>${actions}</div></td></tr>`;
 }
+function toggleDocGroup(id){ docGroupCollapse[id] = !(docGroupCollapse[id] === undefined ? true : docGroupCollapse[id]); renderPencairan(); }
 async function validKegiatanDokumen(idKegiatan){
   const docs = (dashboard?.dokumen || []).filter(d => String(d.id_kegiatan) === String(idKegiatan));
   if(!docs.length){ alert('Belum ada dokumen untuk kegiatan ini.'); return; }
