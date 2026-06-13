@@ -10,6 +10,8 @@ let filters = {
   rencanaBidang: "ALL", rencanaStatus: "ALL", rencanaSearch: "",
   cairBidang: "ALL", cairStatus: "ALL", cairSearch: ""
 };
+let adminEditRows = {};
+let collapseState = { perencanaanInput: false, uploadPencairan: false };
 
 const MENUS_USER = ["Struktur Anggaran", "Perencanaan", "Pencairan"];
 const MENUS_ADMIN = ["Dashboard Monitoring", "Struktur Anggaran", "Perencanaan", "Pencairan"];
@@ -132,17 +134,43 @@ function setPerPage(p){ perPage = Number(p)||10; perencanaanPage=1; pencairanPag
 function goPerencanaanPage(p){ perencanaanPage=p; renderPerencanaan(); }
 function goPencairanPage(p){ pencairanPage=p; renderPencairan(); }
 
+
+function toggleCollapse(key){
+  collapseState[key] = !collapseState[key];
+  renderContent();
+}
+function collapseButton(key){
+  return `<button class="btn-soft btn-toggle" onclick="toggleCollapse('${key}')">${collapseState[key] ? 'Maximize' : 'Minimize'}</button>`;
+}
+function setAdminEditRow(id, on){
+  adminEditRows[id] = !!on;
+  renderStruktur();
+}
+function onPaguAdminInput(el){
+  formatAngkaInput(el);
+}
 function renderMonitoring(){
   const rows = dashboard.rekap.map(r=>{ const pct=toNumber(r.pagu)?Math.min(100,Math.round(toNumber(r.total_perencanaan)/toNumber(r.pagu)*100)):0; return `<tr><td><b>${esc(r.nama_bidang)}</b><br><small class="muted">${esc(r.id_bidang)}</small></td><td>${rupiah(r.pagu)}</td><td>${rupiah(r.total_perencanaan)}</td><td>${rupiah(r.sisa_pagu)}</td><td><div class="progress-bar"><div style="width:${pct}%"></div></div><small>${pct}%</small></td><td>${esc(r.jumlah_kegiatan||0)}</td><td>${esc(r.dokumen_upload||0)}</td><td>${esc(r.dokumen_valid||0)}</td><td>${badge(r.status_akses)}</td><td>${badge(r.status_progress)}</td></tr>`; }).join("");
   document.getElementById("contentArea").innerHTML = `<section class="panel fade-up"><h3>Dashboard Monitoring Admin</h3><p class="panel-sub">Pantauan perencanaan dan pencairan dari semua bidang.</p><button class="btn-refresh" onclick="refreshData()">Refresh Data</button><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Bidang</th><th>Pagu</th><th>Perencanaan</th><th>Sisa</th><th>%</th><th>Kegiatan</th><th>Dok Upload</th><th>Dok Valid</th><th>Akses</th><th>Progress</th></tr></thead><tbody>${rows || `<tr><td colspan="10" class="empty">Belum ada data</td></tr>`}</tbody></table></div></section>`;
 }
 function renderStruktur(){
   if(isAdmin()){
-    const rows = dashboard.rekap.map(r=>`<div class="admin-row"><div><b>${esc(r.nama_bidang)}</b><br><small class="muted">${esc(r.id_bidang)}</small><br><small>Total: ${rupiah(r.total_perencanaan)} | Sisa: ${rupiah(r.sisa_pagu)}</small></div><div class="field"><label>Pagu</label><input id="pagu_${esc(r.id_bidang)}" type="number" value="${toNumber(r.pagu)}"></div><div class="field"><label>Akses</label><select id="akses_${esc(r.id_bidang)}"><option value="BUKA" ${r.status_akses==='BUKA'?'selected':''}>BUKA</option><option value="TUTUP" ${r.status_akses==='TUTUP'?'selected':''}>TUTUP</option></select></div><div>${badge(r.status_progress)}</div><button onclick="updateBidang('${esc(r.id_bidang)}')">Simpan</button></div>`).join("");
-    document.getElementById("contentArea").innerHTML = `<section class="panel fade-up"><h3>Struktur Anggaran</h3><p class="panel-sub">Admin mengatur pagu dan akses input tiap bidang.</p>${rows || `<p class="muted">Belum ada bidang.</p>`}</section>`;
+    const rows = dashboard.rekap.map(r=>{
+      const id = String(r.id_bidang);
+      const editing = !!adminEditRows[id];
+      const paguView = angkaID(r.pagu);
+      return `<div class="admin-row premium-row ${editing?'editing':''}">
+        <div><b>${esc(r.nama_bidang)}</b><br><small class="muted">${esc(r.id_bidang)}</small><br><small>Total: ${rupiah(r.total_perencanaan)} | Sisa: ${rupiah(r.sisa_pagu)}</small></div>
+        <div class="field"><label>Pagu</label>${editing?`<input id="pagu_${esc(r.id_bidang)}" inputmode="numeric" value="${paguView}" oninput="onPaguAdminInput(this)">`:`<div class="readonly-display">Rp ${paguView}</div>`}</div>
+        <div class="field"><label>Akses</label>${editing?`<select id="akses_${esc(r.id_bidang)}"><option value="BUKA" ${r.status_akses==='BUKA'?'selected':''}>BUKA</option><option value="TUTUP" ${r.status_akses==='TUTUP'?'selected':''}>TUTUP</option></select>`:`<div class="readonly-display">${esc(r.status_akses || '-')}</div>`}</div>
+        <div>${badge(r.status_progress)}</div>
+        <div class="admin-actions">${editing?`<button onclick="updateBidang('${esc(r.id_bidang)}')">Simpan</button><button class="btn-soft" onclick="setAdminEditRow('${esc(r.id_bidang)}', false)">Batal</button>`:`<button class="btn-mini" onclick="setAdminEditRow('${esc(r.id_bidang)}', true)">Edit</button>`}</div>
+      </div>`;
+    }).join("");
+    document.getElementById("contentArea").innerHTML = `<section class="panel fade-up premium-panel"><h3>Struktur Anggaran</h3><p class="panel-sub">Admin mengatur pagu dan akses input tiap bidang. Klik Edit dulu untuk mengubah data.</p>${rows || `<p class="muted">Belum ada bidang.</p>`}</section>`;
   } else {
     const r = dashboard.rekap.find(x=>String(x.id_bidang)===String(currentUser.id_bidang)) || {};
-    document.getElementById("contentArea").innerHTML = `<section class="panel fade-up"><h3>Ringkasan Bidang</h3><p class="panel-sub">Informasi anggaran dan progres bidang.</p><button class="btn-refresh" onclick="refreshData()">Refresh Data</button><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Bidang</th><th>Pagu</th><th>Total Perencanaan</th><th>Sisa</th><th>Kegiatan</th><th>Dokumen</th><th>Akses</th><th>Progress</th></tr></thead><tbody><tr><td>${esc(r.nama_bidang)}</td><td>${rupiah(r.pagu)}</td><td>${rupiah(r.total_perencanaan)}</td><td>${rupiah(r.sisa_pagu)}</td><td>${esc(r.jumlah_kegiatan||0)}</td><td>${esc(r.dokumen_upload||0)}</td><td>${badge(r.status_akses)}</td><td>${badge(r.status_progress)}</td></tr></tbody></table></div></section>`;
+    document.getElementById("contentArea").innerHTML = `<section class="panel fade-up premium-panel"><h3>Ringkasan Bidang</h3><p class="panel-sub">Informasi anggaran dan progres bidang.</p><button class="btn-refresh" onclick="refreshData()">Refresh Data</button><div class="table-wrap" style="margin-top:14px"><table><thead><tr><th>Bidang</th><th>Pagu</th><th>Total Perencanaan</th><th>Sisa</th><th>Kegiatan</th><th>Dokumen</th><th>Akses</th><th>Progress</th></tr></thead><tbody><tr><td>${esc(r.nama_bidang)}</td><td>${rupiah(r.pagu)}</td><td>${rupiah(r.total_perencanaan)}</td><td>${rupiah(r.sisa_pagu)}</td><td>${esc(r.jumlah_kegiatan||0)}</td><td>${esc(r.dokumen_upload||0)}</td><td>${badge(r.status_akses)}</td><td>${badge(r.status_progress)}</td></tr></tbody></table></div></section>`;
   }
 }
 function filterBarPerencanaan(){
@@ -162,7 +190,7 @@ function renderPerencanaan(){
   let html = "";
   if(!isAdmin()){
     if(aksesPerencanaanTerbuka()){
-      html += `<section class="panel fade-up"><h3>Input Perencanaan</h3><p class="panel-sub">Input rencana kegiatan/kebutuhan. Setelah disimpan, status langsung DIAJUKAN ke admin.</p><div class="form-grid"><div class="field"><label>Nama Kegiatan</label><input id="namaKegiatan" placeholder="Contoh: Rapat Koordinasi"></div><div class="field"><label>Rincian Kebutuhan</label><input id="rincian" placeholder="Contoh: Konsumsi rapat"></div><div class="field"><label>Keterangan</label><input id="keterangan" placeholder="Opsional"></div><div class="field"><label>Volume</label><input id="volume" inputmode="numeric" placeholder="Contoh: 2" oninput="onAngkaInput(this)"></div><div class="field"><label>Satuan</label><input id="satuan" placeholder="Orang / Paket / Buah"></div><div class="field"><label>Harga Satuan</label><input id="harga" inputmode="numeric" placeholder="Contoh: 500.000" oninput="onAngkaInput(this)"></div><div class="field"><label>Total Otomatis</label><input id="totalPreview" class="readonly-total" value="Rp0" readonly></div></div><button onclick="savePerencanaan()">Simpan & Ajukan</button><div id="saveMsg" class="msg"></div></section>`;
+      html += `<section class="panel fade-up premium-panel collapsible-panel"><div class="panel-head"><div><h3>Input Perencanaan</h3><p class="panel-sub">Input rencana kegiatan/kebutuhan. Setelah disimpan, status langsung DIAJUKAN ke admin.</p></div>${collapseButton('perencanaanInput')}</div><div class="collapse-body ${collapseState.perencanaanInput?'hidden':''}"><div class="form-grid"><div class="field"><label>Nama Kegiatan</label><input id="namaKegiatan" placeholder="Contoh: Rapat Koordinasi"></div><div class="field"><label>Rincian Kebutuhan</label><input id="rincian" placeholder="Contoh: Konsumsi rapat"></div><div class="field"><label>Keterangan</label><input id="keterangan" placeholder="Opsional"></div><div class="field"><label>Volume</label><input id="volume" inputmode="numeric" placeholder="Contoh: 2" oninput="onAngkaInput(this)"></div><div class="field"><label>Satuan</label><input id="satuan" placeholder="Orang / Paket / Buah"></div><div class="field"><label>Harga Satuan</label><input id="harga" inputmode="numeric" placeholder="Contoh: 500.000" oninput="onAngkaInput(this)"></div><div class="field"><label>Total Otomatis</label><input id="totalPreview" class="readonly-total" value="Rp0" readonly></div></div><button onclick="savePerencanaan()">Simpan & Ajukan</button><div id="saveMsg" class="msg"></div></div></section>`;
     } else {
       html += `<section class="panel fade-up locked-panel"><h3>Perencanaan Ditutup</h3><p class="panel-sub">🔒 Akses perencanaan bidang sedang ditutup oleh admin. Kamu masih bisa membuka menu Pencairan untuk upload/revisi dokumen.</p></section>`;
     }
@@ -176,7 +204,7 @@ function renderPerencanaanRow(k){
   const st = String(k.status_perencanaan||"DIAJUKAN").toUpperCase();
   const locked = isKegiatanLocked(k);
   const aksesBuka = aksesPerencanaanTerbuka();
-  const note = `${k.alasan_penolakan?`<div class="reason-box"><b>Alasan ditolak:</b><br>${esc(k.alasan_penolakan)}</div>`:""}${k.alasan_perubahan?`<div class="history-box"><b>Alasan perubahan:</b><br>${esc(k.alasan_perubahan)}</div>`:""}${k.riwayat_perubahan?`<div class="history-box"><b>Riwayat:</b><br>${esc(k.riwayat_perubahan).replace(/\n/g,'<br>')}</div>`:""}${locked?`<div class="history-box"><b>🔒 Terkunci:</b><br>Dokumen pencairan sudah divalidasi admin.</div>`:""}` || `<span class="muted">-</span>`;
+  const note = `${k.alasan_penolakan?`<div class="reason-box"><b>Alasan ditolak:</b><br>${esc(k.alasan_penolakan)}</div>`:""}${k.alasan_perubahan?`<div class="history-box"><b>Alasan perubahan:</b><br>${esc(k.alasan_perubahan)}</div>`:""}${k.riwayat_perubahan?`<div class="history-box"><b>Riwayat:</b><br>${esc(k.riwayat_perubahan).replace(/\n/g,'<br>')}</div>`:""}` || `<span class="muted">-</span>`;
   let aksi = "";
   if(isAdmin()){
     if(st === "DIAJUKAN" || st === "PERUBAHAN_DIAJUKAN") aksi = `<button class="btn-mini btn-green" onclick="setujui('${esc(k.id_kegiatan)}')">Setujui</button><button class="btn-mini btn-orange" onclick="tolak('${esc(k.id_kegiatan)}')">Tolak</button>`;
@@ -191,7 +219,7 @@ function renderPerencanaanRow(k){
     else aksi = `<span class="muted">Menunggu admin</span>`;
   }
   const perubahan = toNumber(k.perubahan_ke) ? `<br><small class="muted">Perubahan Ke-${toNumber(k.perubahan_ke)}</small>` : "";
-  return `<tr><td>${esc(k.id_kegiatan)}</td><td>${esc(bidangName(k.id_bidang))}</td><td><b>${locked?'🔒 ':''}${esc(k.nama_kegiatan)}</b>${perubahan}</td><td>${esc(k.rincian_kebutuhan)}</td><td>${esc(k.volume)}</td><td>${esc(k.satuan)}</td><td>${rupiah(k.harga_satuan)}</td><td><b>${rupiah(k.jumlah || (toNumber(k.volume)*toNumber(k.harga_satuan)))}</b></td><td>${badge(st)}</td><td class="note-cell">${note}</td><td class="nowrap">${aksi}</td></tr>`;
+  return `<tr><td>${esc(k.id_kegiatan)}</td><td>${esc(bidangName(k.id_bidang))}</td><td><b>${esc(k.nama_kegiatan)}</b>${perubahan}</td><td>${esc(k.rincian_kebutuhan)}</td><td>${esc(k.volume)}</td><td>${esc(k.satuan)}</td><td>${rupiah(k.harga_satuan)}</td><td><b>${rupiah(k.jumlah || (toNumber(k.volume)*toNumber(k.harga_satuan)))}</b></td><td>${badge(st)}</td><td class="note-cell">${note}</td><td class="nowrap">${aksi}</td></tr>`;
 }
 
 function filterBarPencairan(){
@@ -201,7 +229,7 @@ function renderPencairan(){
   let html = "";
   if(!isAdmin()){
     const approved = dashboard.perencanaan.filter(k => String(k.status_perencanaan||"").toUpperCase()==="DISETUJUI");
-    html += `<section class="panel fade-up"><h3>Upload Dokumen Pencairan</h3><p class="panel-sub">Satu kegiatan bisa upload lebih dari satu dokumen. Tambah baris file jika dokumennya lebih dari satu.</p><div class="form-grid"><div class="field"><label>Pilih Kegiatan</label><select id="dokKegiatan">${approved.map(k=>`<option value="${esc(k.id_kegiatan)}">${esc(k.nama_kegiatan)}</option>`).join("")}</select></div></div><div id="uploadRows"><div class="doc-upload-row"><div class="field"><label>Jenis Dokumen</label><select class="jenisDok"><option>Berita Acara</option><option>Daftar Hadir</option><option>Dokumentasi</option><option>Kwitansi</option><option>Surat Tugas</option><option>Dokumen Lainnya</option></select></div><div class="field"><label>File Dokumen</label><input type="file" class="fileDok"></div><button class="btn-red" onclick="removeUploadRow(this)" type="button">Hapus</button></div></div><button class="btn-soft" onclick="addUploadRow()" type="button">+ Tambah File Dokumen</button> <button onclick="uploadDokumen()">Upload Semua Dokumen</button><div id="uploadMsg" class="msg">${approved.length?"":"Belum ada kegiatan yang DISETUJUI admin."}</div></section>`;
+    html += `<section class="panel fade-up premium-panel collapsible-panel"><div class="panel-head"><div><h3>Upload Dokumen Pencairan</h3><p class="panel-sub">Satu kegiatan bisa upload lebih dari satu dokumen. Tambah baris file jika dokumennya lebih dari satu.</p></div>${collapseButton('uploadPencairan')}</div><div class="collapse-body ${collapseState.uploadPencairan?'hidden':''}"><div class="form-grid"><div class="field"><label>Pilih Kegiatan</label><select id="dokKegiatan">${approved.map(k=>`<option value="${esc(k.id_kegiatan)}">${esc(k.nama_kegiatan)}</option>`).join("")}</select></div></div><div id="uploadRows"><div class="doc-upload-row"><div class="field"><label>Jenis Dokumen</label><select class="jenisDok"><option>Berita Acara</option><option>Daftar Hadir</option><option>Dokumentasi</option><option>Kwitansi</option><option>Surat Tugas</option><option>Dokumen Lainnya</option></select></div><div class="field"><label>File Dokumen</label><input type="file" class="fileDok"></div><button class="btn-red" onclick="removeUploadRow(this)" type="button">Hapus</button></div></div><button class="btn-soft" onclick="addUploadRow()" type="button">+ Tambah File Dokumen</button> <button onclick="uploadDokumen()">Upload Semua Dokumen</button><div id="uploadMsg" class="msg">${approved.length?"":"Belum ada kegiatan yang DISETUJUI admin."}</div></div></section>`;
   }
   let docs = dashboard.dokumen || [];
   if(isAdmin() && filters.cairBidang !== "ALL") docs = docs.filter(d => String(d.id_bidang)===filters.cairBidang);
@@ -234,7 +262,11 @@ function addUploadRow(){
 function removeUploadRow(btn){ const rows = document.querySelectorAll(".doc-upload-row"); if(rows.length <= 1) return; btn.closest(".doc-upload-row").remove(); }
 async function updateBidang(id){
   showLoading("Menyimpan bidang...");
-  try{ const r = await apiPost({action:"updateBidang", user:currentUser, id_bidang:id, pagu:document.getElementById(`pagu_${id}`).value, status_akses:document.getElementById(`akses_${id}`).value}); alert(r.message); if(r.success) await loadDashboard(false); }catch(e){alert(e.message)}finally{hideLoading();}
+  try{
+    const r = await apiPost({action:"updateBidang", user:currentUser, id_bidang:id, pagu:toNumber(document.getElementById(`pagu_${id}`).value), status_akses:document.getElementById(`akses_${id}`).value});
+    alert(r.message);
+    if(r.success){ adminEditRows[id] = false; await loadDashboard(false); }
+  }catch(e){alert(e.message)}finally{hideLoading();}
 }
 async function savePerencanaan(){
   if(!aksesPerencanaanTerbuka()){ alert("Akses perencanaan bidang sedang ditutup admin. Menu pencairan tetap bisa digunakan."); return; }
